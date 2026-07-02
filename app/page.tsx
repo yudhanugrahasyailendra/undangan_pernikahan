@@ -38,8 +38,8 @@ function useCountdown(targetTs: number) {
       let diff = targetTs - Date.now();
       if (diff <= 0) { setTime({ d: '00', h: '00', m: '00', s: '00' }); return; }
       const d = Math.floor(diff / 86400000); diff %= 86400000;
-      const h = Math.floor(diff / 3600000);  diff %= 3600000;
-      const mn = Math.floor(diff / 60000);   diff %= 60000;
+      const h = Math.floor(diff / 3600000); diff %= 3600000;
+      const mn = Math.floor(diff / 60000); diff %= 60000;
       const s = Math.floor(diff / 1000);
       setTime({ d: pad(d), h: pad(h), m: pad(mn), s: pad(s) });
     };
@@ -51,137 +51,35 @@ function useCountdown(targetTs: number) {
   return time;
 }
 
-// ── Web Audio Music Player Hook ────────────────────────────────────────────
+// ── HTML5 Audio Music Player Hook ────────────────────────────────────────────
 function useMusicPlayer() {
-  const audioCtxRef    = useRef<AudioContext | null>(null);
-  const masterGainRef  = useRef<GainNode | null>(null);
-  const reverbNodeRef  = useRef<ConvolverNode | null>(null);
-  const activeNodesRef = useRef<AudioNode[]>([]);
-  const chordTimerRef  = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const chordIndexRef  = useRef(0);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
 
-  const chordSets = [
-    [220.00, 261.63, 329.63, 440.00],
-    [174.61, 220.00, 261.63, 349.23],
-    [261.63, 329.63, 392.00, 523.25],
-    [196.00, 246.94, 293.66, 392.00],
-  ];
-
-  const setupReverb = (ctx: AudioContext, master: GainNode) => {
-    const convolver = ctx.createConvolver();
-    const rate = ctx.sampleRate;
-    const length = rate * 2.5;
-    const impulse = ctx.createBuffer(2, length, rate);
-    for (let c = 0; c < 2; c++) {
-      const ch = impulse.getChannelData(c);
-      for (let i = 0; i < length; i++) {
-        ch[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / length, 2.5);
-      }
-    }
-    convolver.buffer = impulse;
-    const reverbGain = ctx.createGain();
-    reverbGain.gain.value = 0.35;
-    convolver.connect(reverbGain);
-    reverbGain.connect(master);
-    reverbNodeRef.current = convolver;
-  };
-
-  const createAudioCtx = () => {
-    if (audioCtxRef.current) return;
-    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-    const master = ctx.createGain();
-    master.gain.setValueAtTime(0, ctx.currentTime);
-    master.connect(ctx.destination);
-    audioCtxRef.current = ctx;
-    masterGainRef.current = master;
-    setupReverb(ctx, master);
-  };
-
-  const playChord = useCallback((freqs: number[]) => {
-    const ctx    = audioCtxRef.current!;
-    const master = masterGainRef.current!;
-    const reverb = reverbNodeRef.current;
-    const now    = ctx.currentTime;
-    const dur    = 3.2;
-
-    freqs.forEach((freq, i) => {
-      const osc = ctx.createOscillator();
-      const g   = ctx.createGain();
-      osc.type = i === 0 ? 'sine' : 'triangle';
-      osc.frequency.setValueAtTime(freq, now);
-      const lfo    = ctx.createOscillator();
-      const lfoG   = ctx.createGain();
-      lfo.frequency.value = 4.5 + i * 0.3;
-      lfoG.gain.value     = freq * 0.003;
-      lfo.connect(lfoG);
-      lfoG.connect(osc.frequency);
-      lfo.start(now);
-      g.gain.setValueAtTime(0, now);
-      g.gain.linearRampToValueAtTime(0.07 / (i + 1), now + 0.8);
-      g.gain.setValueAtTime(0.07 / (i + 1), now + dur - 0.8);
-      g.gain.linearRampToValueAtTime(0, now + dur);
-      osc.connect(g);
-      g.connect(master);
-      if (reverb) g.connect(reverb);
-      osc.start(now);
-      osc.stop(now + dur);
-      activeNodesRef.current.push(osc, lfo, g);
-    });
-
-    const bass  = ctx.createOscillator();
-    const bassG = ctx.createGain();
-    bass.type = 'sine';
-    bass.frequency.value = freqs[0] / 2;
-    bassG.gain.setValueAtTime(0, now);
-    bassG.gain.linearRampToValueAtTime(0.09, now + 1.2);
-    bassG.gain.setValueAtTime(0.09, now + dur - 1);
-    bassG.gain.linearRampToValueAtTime(0, now + dur);
-    bass.connect(bassG);
-    bassG.connect(master);
-    bass.start(now);
-    bass.stop(now + dur);
-    activeNodesRef.current.push(bass, bassG);
+  useEffect(() => {
+    // Buat elemen audio saat komponen di-mount
+    const audio = new Audio('/music/Dewa 19 - Aku Milikmu.mp3');
+    audio.loop = true;
+    audioRef.current = audio;
+    return () => {
+      audio.pause();
+      audioRef.current = null;
+    };
   }, []);
 
-  const scheduleNextChord = useCallback(() => {
-    chordIndexRef.current = (chordIndexRef.current + 1) % chordSets.length;
-    playChord(chordSets[chordIndexRef.current]);
-    chordTimerRef.current = setTimeout(scheduleNextChord, 3000);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [playChord]);
-
   const startMusic = useCallback((vol = 60) => {
-    createAudioCtx();
-    const ctx    = audioCtxRef.current!;
-    const master = masterGainRef.current!;
-    if (ctx.state === 'suspended') ctx.resume();
-    const v = vol / 100;
-    master.gain.cancelScheduledValues(ctx.currentTime);
-    master.gain.setValueAtTime(master.gain.value, ctx.currentTime);
-    master.gain.linearRampToValueAtTime(v, ctx.currentTime + 1);
-    playChord(chordSets[chordIndexRef.current]);
-    chordTimerRef.current = setTimeout(scheduleNextChord, 2800);
-    setIsPlaying(true);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [playChord, scheduleNextChord]);
+    if (audioRef.current) {
+      audioRef.current.volume = vol / 100;
+      audioRef.current.play().catch(console.error);
+      setIsPlaying(true);
+    }
+  }, []);
 
   const stopMusic = useCallback(() => {
-    const ctx    = audioCtxRef.current;
-    const master = masterGainRef.current;
-    if (chordTimerRef.current) clearTimeout(chordTimerRef.current);
-    if (master && ctx) {
-      master.gain.cancelScheduledValues(ctx.currentTime);
-      master.gain.setValueAtTime(master.gain.value, ctx.currentTime);
-      master.gain.linearRampToValueAtTime(0, ctx.currentTime + 1.5);
+    if (audioRef.current) {
+      audioRef.current.pause();
+      setIsPlaying(false);
     }
-    setTimeout(() => {
-      activeNodesRef.current.forEach(n => {
-        try { (n as any).stop?.(); n.disconnect?.(); } catch (_) {}
-      });
-      activeNodesRef.current = [];
-    }, 1600);
-    setIsPlaying(false);
   }, []);
 
   const toggleMusic = useCallback((vol = 60) => {
@@ -190,11 +88,8 @@ function useMusicPlayer() {
   }, [isPlaying, startMusic, stopMusic]);
 
   const applyVolume = useCallback((val: number) => {
-    const ctx    = audioCtxRef.current;
-    const master = masterGainRef.current;
-    if (master && ctx) {
-      master.gain.cancelScheduledValues(ctx.currentTime);
-      master.gain.setValueAtTime(val / 100, ctx.currentTime);
+    if (audioRef.current) {
+      audioRef.current.volume = val / 100;
     }
   }, []);
 
@@ -215,32 +110,68 @@ function saveRsvpList(list: RsvpEntry[]) {
 export default function Home() {
   // envelope / invitation state
   const [envelopeOpen, setEnvelopeOpen] = useState(false);
+  const [envelopeRemoved, setEnvelopeRemoved] = useState(false);
   const [cornersBloom, setCornersBloom] = useState(false);
   const [playerVisible, setPlayerVisible] = useState(false);
 
   // RSVP state
-  const [rsvpSubmitted, setRsvpSubmitted]   = useState(false);
-  const [rsvpMsg, setRsvpMsg]               = useState('');
-  const [rsvpName, setRsvpName]             = useState('');
-  const [rsvpStatus, setRsvpStatus]         = useState<AttendanceStatus | null>(null);
-  const [rsvpNote, setRsvpNote]             = useState('');
-  const [rsvpList, setRsvpList]             = useState<RsvpEntry[]>([]);
+  const [rsvpSubmitted, setRsvpSubmitted] = useState(false);
+  const [rsvpMsg, setRsvpMsg] = useState('');
+  const [rsvpName, setRsvpName] = useState('');
+  const [rsvpStatus, setRsvpStatus] = useState<AttendanceStatus | null>(null);
+  const [rsvpNote, setRsvpNote] = useState('');
+  const [rsvpList, setRsvpList] = useState<RsvpEntry[]>([]);
 
   // volume / player UI state
-  const [volume, setVolume]   = useState(60);
+  const [volume, setVolume] = useState(60);
   const [isMuted, setIsMuted] = useState(false);
-  const prevVolumeRef         = useRef(60);
+  const prevVolumeRef = useRef(60);
   const volIconText = isMuted || volume === 0 ? '🔇' : volume < 50 ? '🔉' : '🔊';
 
   const { isPlaying, startMusic, toggleMusic, applyVolume } = useMusicPlayer();
-  const countdown = useCountdown(new Date('2025-09-20T08:00:00+08:00').getTime());
+  const countdown = useCountdown(new Date('2026-07-08T09:00:00+08:00').getTime());
 
   // load RSVP list from localStorage on mount
   useEffect(() => { setRsvpList(loadRsvpList()); }, []);
 
+  // Scroll Animations using IntersectionObserver
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('active');
+          }
+        });
+      },
+      { threshold: 0.15 }
+    );
+
+    const revealElements = document.querySelectorAll('.reveal');
+    revealElements.forEach((el) => observer.observe(el));
+
+    return () => {
+      revealElements.forEach((el) => observer.unobserve(el));
+    };
+  }, []);
+
+  // Kunci scroll saat cover belum dibuka
+  useEffect(() => {
+    if (!envelopeOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => { document.body.style.overflow = ''; };
+  }, [envelopeOpen]);
+
   // ── Open invitation (triggered by button click) ──
   const openInvitation = () => {
     setEnvelopeOpen(true);
+    setTimeout(() => {
+      setEnvelopeRemoved(true);
+      window.scrollTo(0, 0);
+    }, 1000); // Hapus cover dari DOM setelah animasi fade
     setTimeout(() => setCornersBloom(true), 300);
     // autoplay music after a brief delay (user gesture already happened via button)
     setTimeout(() => {
@@ -268,11 +199,11 @@ export default function Home() {
   // ── RSVP submit ──
   const submitRsvp = () => {
     if (!rsvpName.trim()) { alert('Mohon isi nama Anda terlebih dahulu.'); return; }
-    if (!rsvpStatus)      { alert('Mohon pilih status kehadiran Anda.');   return; }
+    if (!rsvpStatus) { alert('Mohon pilih status kehadiran Anda.'); return; }
     const msg =
-      rsvpStatus === 'hadir'  ? `Terima kasih, ${rsvpName}! Kami sangat menantikan kehadiran Anda. 🌹` :
-      rsvpStatus === 'tidak'  ? `Terima kasih atas konfirmasinya, ${rsvpName}. Doa Anda sangat berarti bagi kami. 🙏` :
-                                `Terima kasih, ${rsvpName}. Kami tunggu keputusan Anda ya! 💛`;
+      rsvpStatus === 'hadir' ? `Terima kasih, ${rsvpName}! Kami sangat menantikan kehadiran Anda. 🌹` :
+        rsvpStatus === 'tidak' ? `Terima kasih atas konfirmasinya, ${rsvpName}. Doa Anda sangat berarti bagi kami. 🙏` :
+          `Terima kasih, ${rsvpName}. Kami tunggu keputusan Anda ya! 💛`;
     const entry: RsvpEntry = {
       name: rsvpName.trim(),
       status: rsvpStatus,
@@ -290,25 +221,27 @@ export default function Home() {
   const rsvpCounts = {
     hadir: rsvpList.filter(r => r.status === 'hadir').length,
     tidak: rsvpList.filter(r => r.status === 'tidak').length,
-    ragu:  rsvpList.filter(r => r.status === 'ragu').length,
+    ragu: rsvpList.filter(r => r.status === 'ragu').length,
     total: rsvpList.length,
   };
 
   return (
     <>
       {/* ── ENVELOPE / COVER SCREEN ── */}
-      <div id="envelope-screen" className={envelopeOpen ? 'hidden' : ''}>
-        <p className="envelope-label">Anda mendapat undangan dari</p>
-        <div className="envelope-names">
-          Rizky<br />& Aulia
+      {!envelopeRemoved && (
+        <div id="envelope-screen" className={envelopeOpen ? 'hidden' : ''}>
+          <p className="envelope-label">Anda mendapat undangan dari</p>
+          <div className="envelope-names">
+            Ilyas<br />&amp;<br />Hikmah
+          </div>
+          <div className="envelope-divider" />
+          <p className="envelope-music-note">♫</p>
+          {/* Tombol Buka Undangan */}
+          <button className="envelope-open-btn" onClick={openInvitation}>
+            Buka Undangan ✦
+          </button>
         </div>
-        <div className="envelope-divider" />
-        <p className="envelope-music-note">♫</p>
-        {/* Tombol Buka Undangan */}
-        <button className="envelope-open-btn" onClick={openInvitation}>
-          Buka Undangan ✦
-        </button>
-      </div>
+      )}
 
       {/* ── HERO ── */}
       <section id="hero">
@@ -319,12 +252,14 @@ export default function Home() {
 
         <div className="hero-inner">
           <p className="hero-eyebrow">— Undangan Pernikahan —</p>
-          <div className="hero-script">Rizky</div>
+          <div className="hero-script">Ilyas</div>
+          <br />
           <span className="hero-amp">&amp;</span>
-          <div className="hero-script">Aulia</div>
+          <br />
+          <div className="hero-script">Hikmah</div>
           <div className="hero-divider" />
-          <p className="hero-date">Sabtu, 20 September 2025</p>
-          <p className="hero-location" style={{ marginTop: '.6rem' }}>Makassar, Sulawesi Selatan</p>
+          <p className="hero-date">Rabu, 8 Juli 2026</p>
+          <p className="hero-location" style={{ marginTop: '.6rem' }}>Pangkep, Sulawesi Selatan</p>
         </div>
 
         <div className="scroll-hint">
@@ -347,20 +282,23 @@ export default function Home() {
 
       {/* ── COUPLE ── */}
       <section id="couple">
-        <div className="center">
+        <div className="center reveal">
           <span className="section-label">Yang Berbahagia</span>
           <h2 className="section-title">Mempelai</h2>
           <div className="gold-rule" />
         </div>
 
-        <div className="couple-grid">
+        <div className="couple-grid reveal delay-1">
           {/* Groom */}
           <div className="person">
-            <div className="person-photo">🤵</div>
+            <div className="person-photo" style={{ padding: 0, overflow: 'hidden', width: '100%', maxWidth: '260px', height: '380px', borderRadius: '130px 130px 12px 12px', border: '4px solid var(--gold)', boxShadow: '0 8px 24px rgba(0,0,0,0.15)', margin: '0 auto 1.5rem', background: 'none' }}>
+              <img src="/images/mempelai/Ilyas.jpeg" alt="Ilyas" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 40%' }} />
+            </div>
             <p className="person-role">Mempelai Pria</p>
-            <p className="person-name">Rizky</p>
-            <p className="person-full">Muhammad Rizky Pratama, S.T.</p>
-            <p className="person-parents">Putra pertama dari<br />Bpk. H. Ahmad Fauzi &amp; Ibu Hj. Siti Rahayu</p>
+            <p className="person-name">Ilyas</p>
+            <p className="person-full">Muhammad Ilyas</p>
+            <p className="person-parents">Putra Ketujuh dari Alm. Bapak Abd. Latif & Ibu Nurhaedah</p>
+            <a href="https://www.instagram.com/muhammadkaddi?igsh=Nm5pbGJic2FqM2xw" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--gold)', textDecoration: 'none', marginTop: '0.5rem', display: 'inline-block', fontSize: '0.9rem' }}>✦ Instagram</a>
           </div>
 
           {/* Divider — "&" tengah */}
@@ -372,38 +310,41 @@ export default function Home() {
 
           {/* Bride */}
           <div className="person">
-            <div className="person-photo">👰</div>
+            <div className="person-photo" style={{ padding: 0, overflow: 'hidden', width: '100%', maxWidth: '260px', height: '380px', borderRadius: '130px 130px 12px 12px', border: '4px solid var(--gold)', boxShadow: '0 8px 24px rgba(0,0,0,0.15)', margin: '0 auto 1.5rem', background: 'none' }}>
+              <img src="/images/mempelai/Hikmah.jpeg" alt="Hikmah" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center' }} />
+            </div>
             <p className="person-role">Mempelai Wanita</p>
-            <p className="person-name">Aulia</p>
-            <p className="person-full">Nur Aulia Fitri, S.Pd.</p>
-            <p className="person-parents">Putri kedua dari<br />Bpk. Drs. Hasan Basri &amp; Ibu Fatimah, M.Pd.</p>
+            <p className="person-name">Hikmah</p>
+            <p className="person-full">Nur Hikmah</p>
+            <p className="person-parents">Putri Ketujuh dari Bapak Jumaleng dg. Solo & Ibu Kartia Mahaseng</p>
+            <a href="https://www.instagram.com/_____nrrhkmaa?igsh=MXg3MHc2enRiMjl5MQ==" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--gold)', textDecoration: 'none', marginTop: '0.5rem', display: 'inline-block', fontSize: '0.9rem' }}>✦ Instagram</a>
           </div>
         </div>
       </section>
 
       {/* ── EVENTS (dengan tombol Lihat Lokasi di tiap card) ── */}
       <section id="events">
-        <div className="center">
+        <div className="center reveal">
           <span className="section-label">Rangkaian Acara</span>
           <h2 className="section-title" style={{ color: 'var(--cream)' }}>Waktu &amp; Tempat</h2>
           <div className="gold-rule" style={{ background: 'var(--gold)' }} />
         </div>
 
-        <div className="events-grid">
+        <div className="events-grid reveal delay-1">
           {/* Akad Nikah */}
           <div className="event-card">
             <div className="event-icon">🕌</div>
             <p className="event-type">Prosesi Pertama</p>
             <h3 className="event-name">Akad Nikah</h3>
             <div className="event-detail">
-              <strong>Sabtu, 20 September 2025</strong>
-              08.00 WITA — selesai<br /><br />
-              <strong>Masjid Raya Makassar</strong>
-              Jl. Masjid Raya No.57,<br />Bontoala, Kota Makassar
+              <strong>Rabu, 8 Juli 2026</strong>
+              09.00 WITA — selesai<br /><br />
+              <strong>Kediaman Mempelai Wanita</strong>
+              Jl. Coppo Tompong No.63,<br />Kel. Tumampua, Kec. Pangkajene, Kab. Pangkep
             </div>
             <a
               className="event-map-btn"
-              href="https://maps.google.com/?q=Masjid+Raya+Makassar"
+              href="https://maps.app.goo.gl/NNNYf5AHnRBdHnCa9"
               target="_blank"
               rel="noopener noreferrer"
             >
@@ -417,14 +358,14 @@ export default function Home() {
             <p className="event-type">Prosesi Kedua</p>
             <h3 className="event-name">Resepsi</h3>
             <div className="event-detail">
-              <strong>Sabtu, 20 September 2025</strong>
-              11.00 – 15.00 WITA<br /><br />
-              <strong>The Sultan Hotel Makassar</strong>
-              Jl. Sultan Hasanuddin No.12,<br />Ujung Pandang, Makassar
+              <strong>Rabu, 8 Juli 2026</strong>
+              12.00 WITA — selesai (Pesta Siang Malam)<br /><br />
+              <strong>Kediaman Mempelai Wanita</strong>
+              Jl. Coppo Tompong No.63,<br />Kel. Tumampua, Kec. Pangkajene, Kab. Pangkep
             </div>
             <a
               className="event-map-btn"
-              href="https://maps.google.com/?q=The+Sultan+Hotel+Makassar"
+              href="https://maps.app.goo.gl/NNNYf5AHnRBdHnCa9"
               target="_blank"
               rel="noopener noreferrer"
             >
@@ -434,15 +375,59 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ── LOVE STORY ── */}
+      <section id="lovestory">
+        <div className="center reveal">
+          <span className="section-label">Perjalanan Cinta</span>
+          <h2 className="section-title">Love Story</h2>
+          <div className="gold-rule" />
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', marginTop: '2rem' }}>
+          <div style={{ background: '#fff', padding: '1.5rem', borderRadius: '8px', borderLeft: '4px solid var(--gold)', boxShadow: '0 4px 15px rgba(0,0,0,0.05)' }}>
+            <h3 style={{ color: '#2c2c2c', marginBottom: '0.5rem', fontFamily: "'Cormorant Garamond', serif", fontSize: '1.4rem', fontWeight: 600 }}>Awal Bertemu</h3>
+            <span style={{ fontSize: '0.9rem', color: 'var(--gold)', fontWeight: 'bold' }}>2018</span>
+            <p style={{ marginTop: '0.5rem', color: '#555', lineHeight: '1.6', fontSize: '0.95rem' }}>Kami pertama kali bertemu di bangku kuliah. Awalnya hanya sebatas teman biasa yang sering mengerjakan tugas bersama.</p>
+          </div>
+          <div style={{ background: '#fff', padding: '1.5rem', borderRadius: '8px', borderLeft: '4px solid var(--gold)', boxShadow: '0 4px 15px rgba(0,0,0,0.05)' }}>
+            <h3 style={{ color: '#2c2c2c', marginBottom: '0.5rem', fontFamily: "'Cormorant Garamond', serif", fontSize: '1.4rem', fontWeight: 600 }}>Menjalin Kasih</h3>
+            <span style={{ fontSize: '0.9rem', color: 'var(--gold)', fontWeight: 'bold' }}>2021</span>
+            <p style={{ marginTop: '0.5rem', color: '#555', lineHeight: '1.6', fontSize: '0.95rem' }}>Setelah lulus, takdir mempertemukan kami kembali di satu tempat kerja. Kebersamaan menumbuhkan benih cinta di antara kami.</p>
+          </div>
+          <div style={{ background: '#fff', padding: '1.5rem', borderRadius: '8px', borderLeft: '4px solid var(--gold)', boxShadow: '0 4px 15px rgba(0,0,0,0.05)' }}>
+            <h3 style={{ color: '#2c2c2c', marginBottom: '0.5rem', fontFamily: "'Cormorant Garamond', serif", fontSize: '1.4rem', fontWeight: 600 }}>Melangkah Bersama</h3>
+            <span style={{ fontSize: '0.9rem', color: 'var(--gold)', fontWeight: 'bold' }}>2025</span>
+            <p style={{ marginTop: '0.5rem', color: '#555', lineHeight: '1.6', fontSize: '0.95rem' }}>Dengan restu kedua orang tua, kami memutuskan untuk mengikat janji suci pernikahan.</p>
+          </div>
+        </div>
+      </section>
+
+      {/* ── WEDDING GALLERY ── */}
+      <section id="gallery">
+        <div className="center reveal">
+          <span className="section-label">Momen Indah</span>
+          <h2 className="section-title">Wedding Gallery</h2>
+          <div className="gold-rule" />
+        </div>
+
+        <div className="reveal delay-1" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px', marginTop: '2rem' }}>
+          {[1, 2, 3, 4, 5, 6].map((num) => (
+            <div key={num} style={{ width: '100%', aspectRatio: '1', backgroundColor: '#222', borderRadius: '8px', overflow: 'hidden' }}>
+              <img src={`/images/gallery/gallery-${num}.jpeg`} alt={`Gallery ${num}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            </div>
+          ))}
+        </div>
+      </section>
+
       {/* ── COUNTDOWN ── */}
       <section id="countdown">
-        <div className="center">
+        <div className="center reveal">
           <span className="section-label" style={{ color: 'var(--green-light)' }}>Menghitung Hari</span>
           <h2 className="section-title">Hari Bahagia Tiba Dalam</h2>
           <div className="gold-rule" />
         </div>
 
-        <div className="timer-grid">
+        <div className="timer-grid reveal delay-1">
           <div className="timer-box">
             <span className="timer-num">{countdown.d}</span>
             <p className="timer-label">Hari</p>
@@ -467,49 +452,50 @@ export default function Home() {
 
       {/* ── QUOTE ── */}
       <section id="quote">
-        <blockquote className="quote-text">
+        <blockquote className="quote-text reveal">
           &ldquo;Menikah bukan tentang menemukan seseorang yang sempurna, melainkan tentang belajar melihat orang yang tidak sempurna dengan cara yang sempurna.&rdquo;
         </blockquote>
-        <div className="gold-rule" />
-        <p className="quote-source">✦ Sebuah doa untuk Rizky &amp; Aulia ✦</p>
+        <div className="gold-rule reveal" />
+        <p className="quote-source reveal delay-1">✦ Sebuah doa untuk Ilyas &amp; Hikmah ✦</p>
       </section>
 
       {/* ── RSVP ── */}
       <section id="rsvp">
-        {/* ── Dashboard kehadiran (selalu tampil) ── */}
-        {rsvpCounts.total > 0 && (
-          <div className="rsvp-dashboard">
-            <p className="rsvp-dashboard-title">Status Kehadiran Tamu</p>
-            <div className="rsvp-dashboard-grid">
-              <div className="rsvp-stat rsvp-stat--hadir">
-                <span className="rsvp-stat-num">{rsvpCounts.hadir}</span>
-                <span className="rsvp-stat-label">✓ Hadir</span>
-              </div>
-              <div className="rsvp-stat rsvp-stat--tidak">
-                <span className="rsvp-stat-num">{rsvpCounts.tidak}</span>
-                <span className="rsvp-stat-label">✗ Tidak Hadir</span>
-              </div>
-              <div className="rsvp-stat rsvp-stat--ragu">
-                <span className="rsvp-stat-num">{rsvpCounts.ragu}</span>
-                <span className="rsvp-stat-label">? Ragu-ragu</span>
-              </div>
-            </div>
-            <p className="rsvp-dashboard-total">{rsvpCounts.total} tamu telah mengonfirmasi</p>
-          </div>
-        )}
 
         {rsvpSubmitted ? (
-          <div className="rsvp-success">
+          <div className="rsvp-success reveal">
             <p className="rsvp-success-icon">🌿</p>
             <p className="rsvp-success-title">Terima Kasih</p>
             <p className="rsvp-success-msg">{rsvpMsg}</p>
           </div>
         ) : (
-          <>
+          <div className="reveal">
             <span className="section-label">Konfirmasi Kehadiran</span>
             <h2 className="section-title">RSVP</h2>
             <div className="gold-rule" style={{ background: 'var(--gold)' }} />
-            <p className="rsvp-sub">Mohon konfirmasi kehadiran Anda paling lambat 5 September 2025</p>
+            <p className="rsvp-sub">Mohon konfirmasi kehadiran Anda paling lambat 1 Juli 2026</p>
+
+            {/* ── Dashboard kehadiran ── */}
+            {rsvpCounts.total > 0 && (
+              <div className="rsvp-dashboard reveal delay-1" style={{ marginTop: '1.5rem', marginBottom: '2rem' }}>
+                <p className="rsvp-dashboard-title">Status Kehadiran Tamu</p>
+                <div className="rsvp-dashboard-grid">
+                  <div className="rsvp-stat rsvp-stat--hadir">
+                    <span className="rsvp-stat-num">{rsvpCounts.hadir}</span>
+                    <span className="rsvp-stat-label">✓ Hadir</span>
+                  </div>
+                  <div className="rsvp-stat rsvp-stat--tidak">
+                    <span className="rsvp-stat-num">{rsvpCounts.tidak}</span>
+                    <span className="rsvp-stat-label">✗ Tidak Hadir</span>
+                  </div>
+                  <div className="rsvp-stat rsvp-stat--ragu">
+                    <span className="rsvp-stat-num">{rsvpCounts.ragu}</span>
+                    <span className="rsvp-stat-label">? Ragu-ragu</span>
+                  </div>
+                </div>
+                <p className="rsvp-dashboard-total">{rsvpCounts.total} tamu telah mengonfirmasi</p>
+              </div>
+            )}
 
             <div className="rsvp-form">
               <input
@@ -520,48 +506,60 @@ export default function Home() {
                 onChange={e => setRsvpName(e.target.value)}
               />
 
-              {/* Attendance buttons */}
-              <div className="rsvp-attend-group">
-                <button
-                  className={`rsvp-attend-btn rsvp-attend-btn--hadir${rsvpStatus === 'hadir' ? ' active' : ''}`}
-                  onClick={() => setRsvpStatus('hadir')}
-                  type="button"
-                >
-                  ✓ Hadir
-                </button>
-                <button
-                  className={`rsvp-attend-btn rsvp-attend-btn--tidak${rsvpStatus === 'tidak' ? ' active' : ''}`}
-                  onClick={() => setRsvpStatus('tidak')}
-                  type="button"
-                >
-                  ✗ Tidak Hadir
-                </button>
-                <button
-                  className={`rsvp-attend-btn rsvp-attend-btn--ragu${rsvpStatus === 'ragu' ? ' active' : ''}`}
-                  onClick={() => setRsvpStatus('ragu')}
-                  type="button"
-                >
-                  ? Ragu-ragu
-                </button>
-              </div>
-
               <textarea
                 className="rsvp-input"
                 rows={3}
                 placeholder="Ucapan & doa untuk mempelai (opsional)"
-                style={{ resize: 'vertical' }}
+                style={{ resize: 'vertical', marginTop: '1rem' }}
                 value={rsvpNote}
                 onChange={e => setRsvpNote(e.target.value)}
               />
-              <button className="rsvp-btn" onClick={submitRsvp}>Kirim Konfirmasi</button>
+
+              <select
+                className="rsvp-input"
+                value={rsvpStatus || ''}
+                onChange={e => setRsvpStatus(e.target.value as AttendanceStatus)}
+                style={{ marginTop: '1rem', appearance: 'none' }}
+              >
+                <option value="" disabled>-- Pilih Status Kehadiran --</option>
+                <option value="hadir">✓ Hadir</option>
+                <option value="tidak">✗ Tidak Hadir</option>
+                <option value="ragu">? Ragu-ragu</option>
+              </select>
+
+              <button className="rsvp-btn" onClick={submitRsvp} disabled={!rsvpName.trim() || !rsvpStatus} style={{ marginTop: '1rem' }}>Kirim Konfirmasi</button>
             </div>
-          </>
+          </div>
         )}
+
+        {/* ── Kotak Daftar Ucapan & Kehadiran ── */}
+        <div className="rsvp-messages" style={{ marginTop: '3rem', textAlign: 'left', borderTop: '1px solid rgba(201,168,76,0.2)', paddingTop: '2rem' }}>
+          <h3 style={{ color: 'var(--cream)', marginBottom: '1.5rem', textAlign: 'center', fontSize: '1.3rem' }}>Ucapan & Doa</h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', maxHeight: '400px', overflowY: 'auto', paddingRight: '5px' }}>
+            {rsvpList.map((item, idx) => (
+              <div key={idx} style={{ background: 'rgba(255,255,255,0.03)', padding: '1rem', borderRadius: '8px', border: '1px solid rgba(201,168,76,0.3)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                  <strong style={{ color: 'var(--cream)', fontSize: '1.05rem' }}>{item.name}</strong>
+                  <span title={item.status === 'hadir' ? 'Hadir' : item.status === 'tidak' ? 'Tidak Hadir' : 'Ragu-ragu'} style={{ fontSize: '1.2rem' }}>
+                    {item.status === 'hadir' ? '✅' : item.status === 'tidak' ? '❌' : '❓'}
+                  </span>
+                </div>
+                {item.note && <p style={{ fontSize: '0.95rem', color: '#ccc', fontStyle: 'italic', margin: 0, lineHeight: '1.5' }}>"{item.note}"</p>}
+                <div style={{ fontSize: '0.8rem', color: '#777', marginTop: '0.75rem' }}>
+                  {new Date(item.timestamp).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })}
+                </div>
+              </div>
+            ))}
+            {rsvpList.length === 0 && (
+              <p style={{ textAlign: 'center', color: '#888', fontStyle: 'italic' }}>Belum ada ucapan. Jadilah yang pertama!</p>
+            )}
+          </div>
+        </div>
       </section>
 
       {/* ── AMPLOP DIGITAL ── */}
       <section id="amplop">
-        <div className="center">
+        <div className="center reveal">
           <span className="section-label" style={{ color: 'var(--gold)' }}>Hadiah &amp; Ucapan</span>
           <h2 className="section-title" style={{ color: 'var(--cream)' }}>Amplop Digital</h2>
           <div className="gold-rule" style={{ background: 'var(--gold)' }} />
@@ -571,44 +569,54 @@ export default function Home() {
         </div>
 
         <div className="amplop-grid">
-          {/* BCA */}
-          <div className="amplop-card">
-            <div className="amplop-bank-logo">🏦</div>
-            <p className="amplop-bank-name">Bank BCA</p>
+          {/* SeaBank */}
+          <div className="amplop-card reveal delay-1">
+            <div className="amplop-bank-logo" style={{ marginBottom: '1rem' }}>
+              <img src="/images/logo/seabank.png" alt="SeaBank" style={{ height: '75px', width: 'auto', display: 'block', margin: '0 auto', filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.15))' }} />
+            </div>
             <div className="amplop-divider" />
-            <p className="amplop-norek">1234 5678 90</p>
-            <p className="amplop-owner">a/n Muhammad Rizky Pratama</p>
+            <p className="amplop-norek">9016 5015 8763</p>
+            <p className="amplop-owner">a/n Nur Hikmah</p>
             <button
               className="amplop-copy-btn"
               onClick={() => {
-                navigator.clipboard.writeText('1234567890');
+                navigator.clipboard.writeText('901650158763');
                 alert('Nomor rekening disalin! ✓');
               }}
             >
-              Salin Nomor Rekening
+              Copy
             </button>
           </div>
 
-          {/* GoPay / DANA */}
-          <div className="amplop-card">
-            <div className="amplop-bank-logo">📱</div>
-            <p className="amplop-bank-name">GoPay / DANA</p>
+          {/* BRI */}
+          <div className="amplop-card reveal delay-2">
+            <div className="amplop-bank-logo" style={{ marginBottom: '1rem' }}>
+              <img src="/images/logo/bri.png" alt="BRI" style={{ height: '75px', width: 'auto', display: 'block', margin: '0 auto', filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.15))' }} />
+            </div>
             <div className="amplop-divider" />
-            <p className="amplop-norek">0812 3456 7890</p>
-            <p className="amplop-owner">a/n Nur Aulia Fitri</p>
+            <p className="amplop-norek">5009 0103 9697 538</p>
+            <p className="amplop-owner">a/n Muhammad Ilyas</p>
             <button
               className="amplop-copy-btn"
               onClick={() => {
-                navigator.clipboard.writeText('081234567890');
-                alert('Nomor disalin! ✓');
+                navigator.clipboard.writeText('500901039697538');
+                alert('Nomor rekening disalin! ✓');
               }}
             >
-              Salin Nomor
+              Copy
             </button>
           </div>
         </div>
 
-        <p className="amplop-note">
+        <div className="reveal delay-3" style={{ marginTop: '2rem', textAlign: 'center', background: 'rgba(255,255,255,0.05)', padding: '1.5rem', borderRadius: '8px', border: '1px solid rgba(201,168,76,0.3)' }}>
+          <p style={{ color: 'var(--gold)', fontWeight: 'bold', marginBottom: '0.5rem' }}>Alamat Pengiriman Kado</p>
+          <p style={{ color: '#ccc', fontSize: '0.9rem', lineHeight: '1.5' }}>
+            Jl. Coppo Tompong No.63 Kel. Tumampua,<br />
+            Kec. Pangkajene, Kab. Pangkep
+          </p>
+        </div>
+
+        <p className="amplop-note reveal delay-3">
           ❤️ Kehadiran dan doa restu Anda adalah hadiah terbesar bagi kami
         </p>
       </section>
@@ -616,53 +624,56 @@ export default function Home() {
       {/* ── FOOTER ── */}
       <footer>
         <div className="footer-hearts">♥ ♥ ♥</div>
-        <p className="footer-script">Rizky &amp; Aulia</p>
-        <p className="footer-sub" style={{ marginTop: '1rem' }}>20 · 09 · 2025 &nbsp;|&nbsp; Makassar</p>
+        <p className="footer-script">Ilyas &amp; Hikmah</p>
+        <p className="footer-sub" style={{ marginTop: '1rem' }}>08 · 07 · 2026 &nbsp;|&nbsp; Pangkep</p>
         <p className="footer-sub" style={{ marginTop: '.75rem', fontStyle: 'italic', fontFamily: "'Cormorant Garamond', serif", letterSpacing: '.1em', fontSize: '.9rem', opacity: .45 }}>
           Merupakan kehormatan dan kebahagiaan bagi kami apabila Bapak/Ibu/Saudara/i berkenan hadir
         </p>
       </footer>
 
-      {/* ── MUSIC PLAYER (float) ── */}
+      {/* ── MUSIC PLAYER (Minimalist) ── */}
       <div
-        id="music-player"
-        className={`${playerVisible ? 'visible' : ''} ${isPlaying ? 'playing' : ''}`}
+        id="music-player-minimal"
+        className={`${playerVisible ? 'visible' : ''}`}
+        style={{
+          position: 'fixed',
+          bottom: '20px',
+          right: '20px',
+          zIndex: 1000,
+          opacity: playerVisible ? 1 : 0,
+          transform: playerVisible ? 'translateY(0)' : 'translateY(20px)',
+          transition: 'all 0.5s ease',
+          pointerEvents: playerVisible ? 'auto' : 'none',
+        }}
       >
-        <div className="player-meta">
-          <p className="player-title">Enchanted Wedding</p>
-          <p className="player-artist">Ambient · Romantis</p>
-        </div>
-        <div className="player-wave">
-          <div className="wave-bar" />
-          <div className="wave-bar" />
-          <div className="wave-bar" />
-          <div className="wave-bar" />
-          <div className="wave-bar" />
-          <div className="wave-bar" />
-        </div>
         <button
-          className="player-btn"
-          id="play-btn"
           onClick={() => toggleMusic(volume)}
+          style={{
+            width: '45px',
+            height: '45px',
+            borderRadius: '50%',
+            background: 'var(--gold)',
+            color: 'var(--dark-bg)',
+            border: 'none',
+            outline: 'none',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '1.2rem',
+            boxShadow: '0 4px 10px rgba(0,0,0,0.3)',
+            animation: isPlaying ? 'spin 4s linear infinite' : 'none',
+          }}
           title="Play / Stop musik"
         >
-          <div className="btn-icon" />
+          {isPlaying ? '🎵' : '🔇'}
         </button>
-        <div className="player-vol">
-          <span className="vol-icon" onClick={handleToggleMute} id="vol-icon">
-            {volIconText}
-          </span>
-          <input
-            className="vol-slider"
-            type="range"
-            id="vol-slider"
-            min={0}
-            max={100}
-            value={volume}
-            onChange={e => handleVolumeChange(Number(e.target.value))}
-            title="Volume"
-          />
-        </div>
+        <style dangerouslySetInnerHTML={{
+          __html: `
+          @keyframes spin {
+            100% { transform: rotate(360deg); }
+          }
+        `}} />
       </div>
     </>
   );
