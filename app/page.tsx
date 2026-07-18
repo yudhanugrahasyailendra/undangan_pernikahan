@@ -175,7 +175,6 @@ export default function Home() {
     }
     return () => { document.body.style.overflow = ''; };
   }, [envelopeOpen]);
-
   // ── Open invitation (triggered by button click) ──
   const openInvitation = () => {
     setEnvelopeOpen(true);
@@ -191,6 +190,17 @@ export default function Home() {
       // tampilkan info lagu sebentar, lalu ciutkan jadi gambar album saja
       setTimeout(() => setPlayerCollapsed(true), 5000);
     }, 900);
+  };
+
+  // ── Toggle play/pause dari widget player; setiap kali diputar (ulang),
+  // tampilkan lagi info lagu sebentar lalu ciutkan setelah 5 detik ──
+  const handlePlayerToggle = () => {
+    const willPlay = !isPlaying;
+    toggleMusic(volume);
+    if (willPlay) {
+      setPlayerCollapsed(false);
+      setTimeout(() => setPlayerCollapsed(true), 5000);
+    }
   };
 
   // ── Volume helpers ──
@@ -677,7 +687,7 @@ export default function Home() {
         <div
           className="player-art"
           style={{ backgroundImage: "url('/images/logo/formatmasadepan.png')" }}
-          onClick={() => toggleMusic(volume)}
+          onClick={handlePlayerToggle}
           title="Play / Stop musik"
         />
         <div className="player-meta">
@@ -692,7 +702,7 @@ export default function Home() {
           <span className="wave-bar" />
           <span className="wave-bar" />
         </div>
-        <button className="player-btn" onClick={() => toggleMusic(volume)} title="Play / Stop musik">
+        <button className="player-btn" onClick={handlePlayerToggle} title="Play / Stop musik">
           {isPlaying ? (
             <span className="btn-icon--pause">
               <span className="pause-bar" />
