@@ -28,6 +28,16 @@ function BotanicalCorner({ className }: { className: string }) {
   );
 }
 
+// ── Full-bleed Couple Photo Overlay ─────────────────────────────────────────
+function CouplePhotoOverlay() {
+  return (
+    <div className="photo-overlay" aria-hidden="true">
+      <div className="photo-overlay-img" style={{ backgroundImage: "url('/images/gallery/gallery-1.jpeg')", backgroundPosition: 'center 30%' }} />
+      <div className="photo-overlay-scrim" />
+    </div>
+  );
+}
+
 // ── Countdown Hook ─────────────────────────────────────────────────────────
 function useCountdown(targetTs: number) {
   const [time, setTime] = useState({ d: '00', h: '00', m: '00', s: '00' });
@@ -113,6 +123,7 @@ export default function Home() {
   const [envelopeRemoved, setEnvelopeRemoved] = useState(false);
   const [cornersBloom, setCornersBloom] = useState(false);
   const [playerVisible, setPlayerVisible] = useState(false);
+  const [playerCollapsed, setPlayerCollapsed] = useState(false);
 
   // RSVP state
   const [rsvpSubmitted, setRsvpSubmitted] = useState(false);
@@ -177,6 +188,8 @@ export default function Home() {
     setTimeout(() => {
       setPlayerVisible(true);
       startMusic(volume);
+      // tampilkan info lagu sebentar, lalu ciutkan jadi gambar album saja
+      setTimeout(() => setPlayerCollapsed(true), 5000);
     }, 900);
   };
 
@@ -230,28 +243,31 @@ export default function Home() {
       {/* ── ENVELOPE / COVER SCREEN ── */}
       {!envelopeRemoved && (
         <div id="envelope-screen" className={envelopeOpen ? 'hidden' : ''}>
-          <p className="envelope-label">Anda mendapat undangan dari</p>
-          <div className="envelope-names">
-            Ilyas<br />&amp;<br />Hikmah
+          <CouplePhotoOverlay />
+          <div className="envelope-content">
+            <p className="envelope-label">The Wedding of</p>
+            <div className="envelope-names">
+              Ilyas<br />&amp;<br />Hikmah
+            </div>
+            <div className="envelope-divider" />
+            {/* Tombol Buka Undangan */}
+            <button className="envelope-open-btn" onClick={openInvitation}>
+              Buka Undangan ✦
+            </button>
           </div>
-          <div className="envelope-divider" />
-          <p className="envelope-music-note">♫</p>
-          {/* Tombol Buka Undangan */}
-          <button className="envelope-open-btn" onClick={openInvitation}>
-            Buka Undangan ✦
-          </button>
         </div>
       )}
 
       {/* ── HERO ── */}
       <section id="hero">
+        <CouplePhotoOverlay />
         <BotanicalCorner className={`corner-tl${cornersBloom ? ' bloomed' : ''}`} />
         <BotanicalCorner className={`corner-tr${cornersBloom ? ' bloomed' : ''}`} />
         <BotanicalCorner className={`corner-bl${cornersBloom ? ' bloomed' : ''}`} />
         <BotanicalCorner className={`corner-br${cornersBloom ? ' bloomed' : ''}`} />
 
         <div className="hero-inner">
-          <p className="hero-eyebrow">— Undangan Pernikahan —</p>
+          <p className="hero-eyebrow">— The Wedding Of —</p>
           <div className="hero-script">Ilyas</div>
           <br />
           <span className="hero-amp">&amp;</span>
@@ -268,23 +284,11 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── OPENING / BISMILLAH ── */}
-      <section id="opening">
-        <p className="arabic-text">بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ</p>
-        <div className="gold-rule" />
-        <p className="opening-verse">
-          &ldquo;Dan di antara tanda-tanda (kebesaran)-Nya ialah Dia menciptakan pasangan-pasangan untukmu dari jenismu sendiri, agar kamu cenderung dan merasa tenteram kepadanya, dan Dia menjadikan di antaramu rasa kasih dan sayang.&rdquo;
-        </p>
-        <p style={{ marginTop: '1rem', fontSize: '.7rem', letterSpacing: '.3em', textTransform: 'uppercase', color: 'var(--gold)', opacity: .6 }}>
-          — QS. Ar-Rum: 21
-        </p>
-      </section>
-
       {/* ── COUPLE ── */}
       <section id="couple">
         <div className="center reveal">
-          <span className="section-label">Yang Berbahagia</span>
-          <h2 className="section-title">Mempelai</h2>
+          <h2 className="section-title">Bride & Groom</h2>
+          <span className="section-label">Tanpa mengurangi rasa hormat, kami bermaksud mengundang Bapak/Ibu/Saudara/I untuk menghadiri acara pernikahan kami :</span>
           <div className="gold-rule" />
         </div>
 
@@ -322,11 +326,55 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ── COUNTDOWN & AYAT SUCI (digabung) ── */}
+      <section id="countdown">
+        <CouplePhotoOverlay />
+        <div className="countdown-ayat-content">
+          <div className="center reveal">
+            <span className="section-label" style={{ color: 'var(--gold-light)' }}>Menghitung Hari</span>
+            <h2 className="section-title" style={{ color: 'var(--cream)' }}>Hari Bahagia Tiba Dalam</h2>
+            <div className="gold-rule" />
+          </div>
+
+          <div className="timer-grid reveal delay-1">
+            <div className="timer-box">
+              <span className="timer-num">{countdown.d}</span>
+              <p className="timer-label">Hari</p>
+            </div>
+            <span className="timer-sep">:</span>
+            <div className="timer-box">
+              <span className="timer-num">{countdown.h}</span>
+              <p className="timer-label">Jam</p>
+            </div>
+            <span className="timer-sep">:</span>
+            <div className="timer-box">
+              <span className="timer-num">{countdown.m}</span>
+              <p className="timer-label">Menit</p>
+            </div>
+            <span className="timer-sep">:</span>
+            <div className="timer-box">
+              <span className="timer-num">{countdown.s}</span>
+              <p className="timer-label">Detik</p>
+            </div>
+          </div>
+
+          <div className="ayat-suci reveal delay-2">
+            <p className="arabic-text">بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ</p>
+            <div className="gold-rule" />
+            <p className="opening-verse">
+              &ldquo;Dan di antara tanda-tanda (kebesaran)-Nya ialah Dia menciptakan pasangan-pasangan untukmu dari jenismu sendiri, agar kamu cenderung dan merasa tenteram kepadanya, dan Dia menjadikan di antaramu rasa kasih dan sayang.&rdquo;
+            </p>
+            <p style={{ marginTop: '1rem', fontSize: '.7rem', letterSpacing: '.3em', textTransform: 'uppercase', color: 'var(--gold)', opacity: .8 }}>
+              — QS. Ar-Rum: 21
+            </p>
+          </div>
+        </div>
+      </section>
+
       {/* ── EVENTS (dengan tombol Lihat Lokasi di tiap card) ── */}
       <section id="events">
         <div className="center reveal">
-          <span className="section-label">Rangkaian Acara</span>
-          <h2 className="section-title" style={{ color: 'var(--cream)' }}>Waktu &amp; Tempat</h2>
+          <h2 className="section-title" style={{ color: 'var(--cream)' }}>Wedding Event</h2>
           <div className="gold-rule" style={{ background: 'var(--gold)' }} />
         </div>
 
@@ -402,6 +450,28 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ── UNTAIAN DOA (heading + paragraf + frame foto pengantin) ── */}
+      <section id="lovenote">
+        <div className="center reveal">
+          <span className="section-label">Sebuah Doa</span>
+          <h2 className="section-title">Menuju Satu Nama, Satu Tujuan</h2>
+          <div className="gold-rule" />
+        </div>
+
+        <p className="lovenote-text reveal delay-1">
+          Setiap kisah punya jalannya masing-masing, dan kami percaya jalan ini telah dituntun oleh-Nya. Dari pertemuan sederhana hingga langkah besar yang akan kami ambil, terima kasih telah menjadi bagian dari perjalanan cinta kami. Doa dan restu Bapak/Ibu/Saudara/i akan menjadi bekal terindah menuju babak baru kehidupan kami.
+        </p>
+
+        <div className="lovenote-frame reveal delay-2">
+          <div className="lovenote-photo">
+            <img src="/images/mempelai/Ilyas.jpeg" alt="Ilyas" style={{ objectPosition: 'center 40%' }} />
+          </div>
+          <div className="lovenote-photo">
+            <img src="/images/mempelai/Hikmah.jpeg" alt="Hikmah" />
+          </div>
+        </div>
+      </section>
+
       {/* ── WEDDING GALLERY ── */}
       <section id="gallery">
         <div className="center reveal">
@@ -419,48 +489,36 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── COUNTDOWN ── */}
-      <section id="countdown">
-        <div className="center reveal">
-          <span className="section-label" style={{ color: 'var(--green-light)' }}>Menghitung Hari</span>
-          <h2 className="section-title">Hari Bahagia Tiba Dalam</h2>
-          <div className="gold-rule" />
-        </div>
-
-        <div className="timer-grid reveal delay-1">
-          <div className="timer-box">
-            <span className="timer-num">{countdown.d}</span>
-            <p className="timer-label">Hari</p>
-          </div>
-          <span className="timer-sep">:</span>
-          <div className="timer-box">
-            <span className="timer-num">{countdown.h}</span>
-            <p className="timer-label">Jam</p>
-          </div>
-          <span className="timer-sep">:</span>
-          <div className="timer-box">
-            <span className="timer-num">{countdown.m}</span>
-            <p className="timer-label">Menit</p>
-          </div>
-          <span className="timer-sep">:</span>
-          <div className="timer-box">
-            <span className="timer-num">{countdown.s}</span>
-            <p className="timer-label">Detik</p>
-          </div>
-        </div>
-      </section>
-
-      {/* ── QUOTE ── */}
-      <section id="quote">
-        <blockquote className="quote-text reveal">
-          &ldquo;Menikah bukan tentang menemukan seseorang yang sempurna, melainkan tentang belajar melihat orang yang tidak sempurna dengan cara yang sempurna.&rdquo;
-        </blockquote>
-        <div className="gold-rule reveal" />
-        <p className="quote-source reveal delay-1">✦ Sebuah doa untuk Ilyas &amp; Hikmah ✦</p>
-      </section>
-
       {/* ── RSVP ── */}
       <section id="rsvp">
+
+        <div className="reveal">
+          <span className="section-label">Konfirmasi Kehadiran</span>
+          <h2 className="section-title">RSVP</h2>
+          <div className="gold-rule" style={{ background: 'var(--gold)' }} />
+          {!rsvpSubmitted && <p className="rsvp-sub">Mohon konfirmasi kehadiran Anda paling lambat 1 Juli 2026</p>}
+        </div>
+
+        {/* ── Dashboard kehadiran ── */}
+        <div className="rsvp-dashboard reveal delay-1" style={{ marginTop: '1.5rem', marginBottom: '2rem' }}>
+          <div className="rsvp-dashboard-grid">
+            <div className="rsvp-stat">
+              <span className="rsvp-stat-num">{rsvpCounts.hadir}</span>
+              <span className="rsvp-stat-label">Hadir</span>
+            </div>
+            <div className="rsvp-stat">
+              <span className="rsvp-stat-num">{rsvpCounts.tidak}</span>
+              <span className="rsvp-stat-label">Tidak hadir</span>
+            </div>
+            <div className="rsvp-stat">
+              <span className="rsvp-stat-num">{rsvpCounts.ragu}</span>
+              <span className="rsvp-stat-label">Masih ragu</span>
+            </div>
+          </div>
+          {rsvpCounts.total > 0 && (
+            <p className="rsvp-dashboard-total">{rsvpCounts.total} tamu telah mengonfirmasi</p>
+          )}
+        </div>
 
         {rsvpSubmitted ? (
           <div className="rsvp-success reveal">
@@ -470,33 +528,6 @@ export default function Home() {
           </div>
         ) : (
           <div className="reveal">
-            <span className="section-label">Konfirmasi Kehadiran</span>
-            <h2 className="section-title">RSVP</h2>
-            <div className="gold-rule" style={{ background: 'var(--gold)' }} />
-            <p className="rsvp-sub">Mohon konfirmasi kehadiran Anda paling lambat 1 Juli 2026</p>
-
-            {/* ── Dashboard kehadiran ── */}
-            {rsvpCounts.total > 0 && (
-              <div className="rsvp-dashboard reveal delay-1" style={{ marginTop: '1.5rem', marginBottom: '2rem' }}>
-                <p className="rsvp-dashboard-title">Status Kehadiran Tamu</p>
-                <div className="rsvp-dashboard-grid">
-                  <div className="rsvp-stat rsvp-stat--hadir">
-                    <span className="rsvp-stat-num">{rsvpCounts.hadir}</span>
-                    <span className="rsvp-stat-label">✓ Hadir</span>
-                  </div>
-                  <div className="rsvp-stat rsvp-stat--tidak">
-                    <span className="rsvp-stat-num">{rsvpCounts.tidak}</span>
-                    <span className="rsvp-stat-label">✗ Tidak Hadir</span>
-                  </div>
-                  <div className="rsvp-stat rsvp-stat--ragu">
-                    <span className="rsvp-stat-num">{rsvpCounts.ragu}</span>
-                    <span className="rsvp-stat-label">? Ragu-ragu</span>
-                  </div>
-                </div>
-                <p className="rsvp-dashboard-total">{rsvpCounts.total} tamu telah mengonfirmasi</p>
-              </div>
-            )}
-
             <div className="rsvp-form">
               <input
                 className="rsvp-input"
@@ -621,59 +652,56 @@ export default function Home() {
         </p>
       </section>
 
-      {/* ── FOOTER ── */}
-      <footer>
-        <div className="footer-hearts">♥ ♥ ♥</div>
-        <p className="footer-script">Ilyas &amp; Hikmah</p>
-        <p className="footer-sub" style={{ marginTop: '1rem' }}>08 · 07 · 2026 &nbsp;|&nbsp; Pangkep</p>
-        <p className="footer-sub" style={{ marginTop: '.75rem', fontStyle: 'italic', fontFamily: "'Cormorant Garamond', serif", letterSpacing: '.1em', fontSize: '.9rem', opacity: .45 }}>
-          Merupakan kehormatan dan kebahagiaan bagi kami apabila Bapak/Ibu/Saudara/i berkenan hadir
-        </p>
+      {/* ── THANK YOU ── */}
+      <footer id="thankyou">
+        <CouplePhotoOverlay />
+        <div className="footer-content">
+          <div className="footer-hearts">♥ ♥ ♥</div>
+          <p className="footer-thanks">Thank You</p>
+          <p className="footer-script">Ilyas &amp; Hikmah</p>
+          <p className="footer-sub" style={{ marginTop: '1rem' }}>08 · 07 · 2026 &nbsp;|&nbsp; Pangkep</p>
+          <p className="footer-sub" style={{ marginTop: '.75rem', fontStyle: 'italic', fontFamily: "'Cormorant Garamond', serif", letterSpacing: '.1em', fontSize: '.9rem', opacity: .45 }}>
+            Merupakan kehormatan dan kebahagiaan bagi kami apabila Bapak/Ibu/Saudara/i berkenan hadir
+          </p>
+          <div className="footer-credit">
+            <span className="footer-credit-label">Created By</span>
+            <div className="footer-credit-badge">
+              <img className="footer-logo" src="/images/logo/Logo Square 2.png" alt="Putri Invitation" />
+            </div>
+          </div>
+        </div>
       </footer>
 
-      {/* ── MUSIC PLAYER (Minimalist) ── */}
-      <div
-        id="music-player-minimal"
-        className={`${playerVisible ? 'visible' : ''}`}
-        style={{
-          position: 'fixed',
-          bottom: '20px',
-          right: '20px',
-          zIndex: 1000,
-          opacity: playerVisible ? 1 : 0,
-          transform: playerVisible ? 'translateY(0)' : 'translateY(20px)',
-          transition: 'all 0.5s ease',
-          pointerEvents: playerVisible ? 'auto' : 'none',
-        }}
-      >
-        <button
+      {/* ── MUSIC PLAYER ── */}
+      <div id="music-player" className={`${isPlaying ? 'playing' : ''} ${playerVisible ? 'visible' : ''} ${playerCollapsed ? 'collapsed' : ''}`}>
+        <div
+          className="player-art"
+          style={{ backgroundImage: "url('/images/logo/formatmasadepan.png')" }}
           onClick={() => toggleMusic(volume)}
-          style={{
-            width: '45px',
-            height: '45px',
-            borderRadius: '50%',
-            background: 'var(--gold)',
-            color: 'var(--dark-bg)',
-            border: 'none',
-            outline: 'none',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: '1.2rem',
-            boxShadow: '0 4px 10px rgba(0,0,0,0.3)',
-            animation: isPlaying ? 'spin 4s linear infinite' : 'none',
-          }}
           title="Play / Stop musik"
-        >
-          {isPlaying ? '🎵' : '🔇'}
+        />
+        <div className="player-meta">
+          <p className="player-title">Aku Milikmu</p>
+          <p className="player-artist">Dewa 19</p>
+        </div>
+        <div className="player-wave">
+          <span className="wave-bar" />
+          <span className="wave-bar" />
+          <span className="wave-bar" />
+          <span className="wave-bar" />
+          <span className="wave-bar" />
+          <span className="wave-bar" />
+        </div>
+        <button className="player-btn" onClick={() => toggleMusic(volume)} title="Play / Stop musik">
+          {isPlaying ? (
+            <span className="btn-icon--pause">
+              <span className="pause-bar" />
+              <span className="pause-bar" />
+            </span>
+          ) : (
+            <span className="btn-icon--play" />
+          )}
         </button>
-        <style dangerouslySetInnerHTML={{
-          __html: `
-          @keyframes spin {
-            100% { transform: rotate(360deg); }
-          }
-        `}} />
       </div>
     </>
   );

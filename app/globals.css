@@ -33,13 +33,18 @@ body {
   display: flex; flex-direction: column;
   align-items: center; justify-content: center;
   cursor: pointer;
+  overflow: hidden;
   transition: opacity 1s ease, visibility 1s ease, transform 1s cubic-bezier(0.7, 0, 0.3, 1);
 }
-#envelope-screen.hidden { 
-  opacity: 0; 
-  visibility: hidden; 
-  pointer-events: none; 
+#envelope-screen.hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
   transform: translateY(-100%);
+}
+.envelope-content {
+  position: relative;
+  z-index: 2;
 }
 
 .envelope-label {
@@ -48,6 +53,7 @@ body {
   font-size: .75rem;
   letter-spacing: .35em;
   text-transform: uppercase;
+  text-align: center;
   margin-bottom: 2rem;
   opacity: .7;
 }
@@ -106,10 +112,10 @@ body {
   width: min(280px, 40vw);
   opacity: .55;
 }
-.corner-tl { top: 0; left: 0; transform-origin: top left; }
-.corner-tr { top: 0; right: 0; transform: scaleX(-1); transform-origin: top right; }
-.corner-bl { bottom: 0; left: 0; transform: scaleY(-1); transform-origin: bottom left; }
-.corner-br { bottom: 0; right: 0; transform: scale(-1,-1); transform-origin: bottom right; }
+.corner-tl { top: 0; left: 0; transform-origin: top left; z-index: 1; }
+.corner-tr { top: 0; right: 0; transform: scaleX(-1); transform-origin: top right; z-index: 1; }
+.corner-bl { bottom: 0; left: 0; transform: scaleY(-1); transform-origin: bottom left; z-index: 1; }
+.corner-br { bottom: 0; right: 0; transform: scale(-1,-1); transform-origin: bottom right; z-index: 1; }
 
 .corner path { stroke: var(--gold); stroke-width: 1.2; fill: none; stroke-dasharray: 900; stroke-dashoffset: 900; }
 .corner.bloomed path { animation: draw 2.4s ease forwards; }
@@ -209,12 +215,27 @@ section { padding: 5rem 1.5rem; }
 }
 .center { text-align: center; }
 
-/* ── BISMILLAH / OPENING ── */
-#opening {
-  background: var(--green-deep);
-  color: var(--cream);
-  text-align: center;
+/* ── FULL-BLEED COUPLE PHOTO OVERLAY ── */
+.photo-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  display: flex;
+  overflow: hidden;
 }
+.photo-overlay-img {
+  flex: 1 1 100%;
+  background-size: cover;
+  background-position: center;
+  filter: saturate(.9);
+}
+.photo-overlay-scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(28,56,41,.88) 0%, rgba(28,56,41,.8) 45%, rgba(28,56,41,.92) 100%);
+}
+
+/* ── BISMILLAH / AYAT SUCI ── */
 .arabic-text {
   font-size: clamp(1.8rem, 5vw, 2.8rem);
   font-family: 'Cormorant Garamond', serif;
@@ -357,10 +378,16 @@ section { padding: 5rem 1.5rem; }
 .event-map-btn:hover { background: var(--gold); color: var(--green-deep); }
 .event-detail strong { color: var(--gold); font-weight: 400; display: block; }
 
-/* ── COUNTDOWN ── */
+/* ── COUNTDOWN & AYAT SUCI (digabung) ── */
 #countdown {
-  background: var(--gold-pale);
+  position: relative;
+  overflow: hidden;
+  background: var(--green-deep);
   text-align: center;
+}
+.countdown-ayat-content {
+  position: relative;
+  z-index: 2;
 }
 .timer-grid {
   display: flex; justify-content: center; gap: clamp(1rem, 4vw, 3rem);
@@ -370,14 +397,22 @@ section { padding: 5rem 1.5rem; }
 .timer-num {
   font-family: 'Cormorant Garamond', serif;
   font-size: clamp(3rem, 8vw, 5rem);
-  font-weight: 300; color: var(--green-deep);
+  font-weight: 300; color: var(--cream);
   line-height: 1;
   min-width: 80px;
   display: block;
 }
 .timer-label {
   font-size: .65rem; letter-spacing: .35em; text-transform: uppercase;
-  color: var(--green-light); margin-top: .4rem;
+  color: var(--gold-light); margin-top: .4rem;
+}
+.ayat-suci {
+  margin-top: 3.5rem;
+  padding-top: 3rem;
+  border-top: 1px solid rgba(201,168,76,.25);
+  max-width: 640px;
+  margin-left: auto;
+  margin-right: auto;
 }
 .timer-sep {
   font-family: 'Cormorant Garamond', serif;
@@ -385,25 +420,44 @@ section { padding: 5rem 1.5rem; }
   align-self: flex-start; padding-top: .15em; opacity: .5;
 }
 
-/* ── QUOTE ── */
-#quote {
+/* ── UNTAIAN DOA (heading + paragraf + frame foto pengantin) ── */
+#lovenote {
   background: var(--cream);
   text-align: center;
 }
-.quote-text {
+.lovenote-text {
   font-family: 'Cormorant Garamond', serif;
-  font-size: clamp(1.3rem, 3.5vw, 2rem);
+  font-size: clamp(1rem, 2.2vw, 1.2rem);
   font-style: italic;
   font-weight: 300;
-  color: var(--green-deep);
+  color: var(--brown);
   max-width: 680px;
-  margin: 0 auto;
-  line-height: 1.7;
+  margin: 2rem auto 0;
+  line-height: 1.9;
+  opacity: .85;
 }
-.quote-source {
-  margin-top: 1.5rem;
-  font-size: .75rem; letter-spacing: .3em; text-transform: uppercase;
-  color: var(--gold);
+.lovenote-frame {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  max-width: 560px;
+  margin: 2.5rem auto 0;
+  padding: .75rem;
+  border: 1px solid var(--gold);
+  border-radius: 8px;
+  background: var(--white);
+  box-shadow: 0 8px 24px rgba(0,0,0,.1);
+}
+.lovenote-photo {
+  flex: 1 1 50%;
+  aspect-ratio: 3 / 4;
+  overflow: hidden;
+  border-radius: 4px;
+}
+.lovenote-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 /* ── LOCATION ── */
@@ -471,6 +525,10 @@ section { padding: 5rem 1.5rem; }
 }
 .rsvp-input::placeholder { color: rgba(250,246,239,.35); }
 .rsvp-input:focus { border-color: var(--gold); }
+.rsvp-input option {
+  color: var(--brown);
+  background: var(--cream);
+}
 /* Attendance buttons (3 pilihan) */
 .rsvp-attend-group {
   display: flex;
@@ -516,17 +574,6 @@ section { padding: 5rem 1.5rem; }
   max-width: 460px;
   margin: 0 auto 2.5rem;
   text-align: center;
-  padding: 1.5rem;
-  border: 1px solid rgba(201,168,76,.2);
-  border-radius: 4px;
-  background: rgba(255,255,255,.04);
-}
-.rsvp-dashboard-title {
-  font-size: .65rem;
-  letter-spacing: .4em;
-  text-transform: uppercase;
-  color: var(--gold);
-  margin-bottom: 1.25rem;
 }
 .rsvp-dashboard-grid {
   display: grid;
@@ -535,27 +582,24 @@ section { padding: 5rem 1.5rem; }
   margin-bottom: 1rem;
 }
 .rsvp-stat {
-  padding: .85rem .5rem;
-  border-radius: 4px;
+  padding: 1.1rem .5rem;
+  border-radius: 12px;
   display: flex;
   flex-direction: column;
   gap: .35rem;
   align-items: center;
+  background: rgba(0,0,0,.28);
+  border: 1px solid rgba(201,168,76,.2);
 }
-.rsvp-stat--hadir { background: rgba(61,122,92,.3); border: 1px solid rgba(61,122,92,.5); }
-.rsvp-stat--tidak { background: rgba(155,58,58,.3); border: 1px solid rgba(155,58,58,.5); }
-.rsvp-stat--ragu  { background: rgba(201,168,76,.15); border: 1px solid rgba(201,168,76,.3); }
 .rsvp-stat-num {
   font-family: 'Cormorant Garamond', serif;
-  font-size: 2rem;
-  font-weight: 300;
+  font-size: 2.2rem;
+  font-weight: 600;
   color: var(--cream);
   line-height: 1;
 }
 .rsvp-stat-label {
-  font-size: .6rem;
-  letter-spacing: .2em;
-  text-transform: uppercase;
+  font-size: .72rem;
   color: var(--gold-light);
   opacity: .8;
 }
@@ -696,12 +740,23 @@ section { padding: 5rem 1.5rem; }
   opacity: .6;
 }
 
-/* ── FOOTER ── */
+/* ── THANK YOU (footer) ── */
 footer {
+  position: relative;
+  overflow: hidden;
   background: var(--green-deep);
   border-top: 1px solid rgba(201,168,76,.2);
   text-align: center;
-  padding: 4rem 1.5rem;
+  padding: 5rem 1.5rem;
+}
+.footer-content {
+  position: relative;
+  z-index: 2;
+}
+.footer-thanks {
+  font-size: .75rem; letter-spacing: .5em; text-transform: uppercase;
+  color: var(--gold-light); opacity: .8;
+  margin-bottom: .75rem;
 }
 .footer-script {
   font-family: 'Great Vibes', cursive;
@@ -712,6 +767,44 @@ footer {
   margin-top: 1rem;
   font-size: .75rem; letter-spacing: .3em; text-transform: uppercase;
   color: var(--gold-light); opacity: .55;
+}
+.footer-credit {
+  margin-top: 3rem;
+  padding-top: 2rem;
+  border-top: 1px solid rgba(201,168,76,.15);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: .9rem;
+}
+.footer-credit-label {
+  font-size: .6rem;
+  letter-spacing: .45em;
+  text-transform: uppercase;
+  color: var(--gold-light);
+  opacity: .5;
+}
+.footer-credit-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: .7rem 1.4rem;
+  border-radius: 16px;
+  background: linear-gradient(145deg, rgba(255,255,255,.06) 0%, rgba(255,255,255,.01) 100%);
+  border: 1px solid rgba(201,168,76,.3);
+  box-shadow: 0 8px 24px rgba(0,0,0,.25), inset 0 1px 1px rgba(255,255,255,.08);
+  backdrop-filter: blur(8px);
+  transition: transform .3s cubic-bezier(.34,1.56,.64,1), border-color .3s ease, box-shadow .3s ease;
+}
+.footer-credit-badge:hover {
+  transform: translateY(-3px);
+  border-color: rgba(201,168,76,.6);
+  box-shadow: 0 12px 30px rgba(0,0,0,.3), inset 0 1px 1px rgba(255,255,255,.12);
+}
+.footer-logo {
+  display: block;
+  width: 130px;
+  height: auto;
 }
 .footer-hearts {
   margin: 1.5rem 0;
@@ -749,20 +842,46 @@ footer {
   box-shadow: 0 8px 32px rgba(0,0,0,.35), 0 0 0 1px rgba(201,168,76,.1);
   transform: translateY(120px);
   opacity: 0;
-  transition: transform .6s cubic-bezier(.34,1.56,.64,1), opacity .5s ease;
+  transition: transform .6s cubic-bezier(.34,1.56,.64,1), opacity .5s ease, padding .5s ease, gap .5s ease;
   max-width: calc(100vw - 3.5rem);
 }
 #music-player.visible {
   transform: translateY(0);
   opacity: 1;
 }
-#music-player.collapsed .player-meta { display: none; }
-#music-player.collapsed { padding-left: .55rem; }
+#music-player.collapsed {
+  gap: 0;
+  padding: .35rem;
+}
+
+.player-art {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-size: cover;
+  background-position: center 20%;
+  flex-shrink: 0;
+  border: 1px solid rgba(201,168,76,.4);
+  cursor: pointer;
+}
+#music-player.playing .player-art {
+  animation: spin 4s linear infinite;
+}
+@keyframes spin {
+  100% { transform: rotate(360deg); }
+}
 
 .player-meta {
   overflow: hidden;
   max-width: 160px;
   flex-shrink: 0;
+  opacity: 1;
+  transition: max-width .45s ease, opacity .3s ease, margin .45s ease;
+}
+#music-player.collapsed .player-meta {
+  max-width: 0;
+  opacity: 0;
+  margin: 0;
 }
 .player-title {
   font-size: .65rem;
@@ -789,6 +908,15 @@ footer {
   align-items: center;
   gap: 2px;
   height: 18px;
+  max-width: 40px;
+  opacity: 1;
+  overflow: hidden;
+  transition: max-width .45s ease, opacity .3s ease, margin .45s ease;
+}
+#music-player.collapsed .player-wave {
+  max-width: 0;
+  opacity: 0;
+  margin: 0;
 }
 .wave-bar {
   width: 2px;
@@ -819,27 +947,37 @@ footer {
   cursor: pointer;
   display: flex; align-items: center; justify-content: center;
   flex-shrink: 0;
-  transition: transform .2s, background .2s;
+  opacity: 1;
+  overflow: hidden;
+  transition: transform .2s, background .2s, width .45s ease, opacity .3s ease, margin .45s ease;
   position: relative;
 }
 .player-btn:hover { transform: scale(1.08); background: var(--gold-light); }
 .player-btn:active { transform: scale(.95); }
+#music-player.collapsed .player-btn {
+  width: 0;
+  opacity: 0;
+  margin: 0;
+  pointer-events: none;
+}
 
-.btn-icon {
+.btn-icon--play {
   width: 0; height: 0;
   border-style: solid;
   border-width: 7px 0 7px 13px;
   border-color: transparent transparent transparent var(--green-deep);
   margin-left: 2px;
-  transition: all .2s;
 }
-#music-player.playing .btn-icon {
+.btn-icon--pause {
   width: 12px; height: 14px;
-  border: none;
-  margin-left: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.pause-bar {
+  width: 4px; height: 14px;
   background: var(--green-deep);
   border-radius: 1px;
-  box-shadow: inset 4px 0 0 var(--gold), inset -4px 0 0 var(--gold);
 }
 
 /* volume knob */
@@ -871,11 +1009,3 @@ footer {
   cursor: pointer;
 }
 
-/* note pulse on envelope screen */
-.envelope-music-note {
-  font-size: 1.5rem;
-  color: var(--gold);
-  opacity: .4;
-  margin-top: 1rem;
-  animation: pulse 2s ease-in-out infinite;
-}
