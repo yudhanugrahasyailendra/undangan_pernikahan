@@ -853,9 +853,11 @@ footer {
   gap: 0;
   padding: .35rem;
 }
-#music-player.collapsed:hover {
-  gap: .85rem;
-  padding: .55rem .55rem .55rem 1.1rem;
+@media (hover: hover) and (pointer: fine) {
+  #music-player.collapsed:hover {
+    gap: .85rem;
+    padding: .55rem .55rem .55rem 1.1rem;
+  }
 }
 
 .player-art {
@@ -887,9 +889,11 @@ footer {
   opacity: 0;
   margin: 0;
 }
-#music-player.collapsed:hover .player-meta {
-  max-width: 160px;
-  opacity: 1;
+@media (hover: hover) and (pointer: fine) {
+  #music-player.collapsed:hover .player-meta {
+    max-width: 160px;
+    opacity: 1;
+  }
 }
 .player-title {
   font-size: .65rem;
@@ -926,9 +930,11 @@ footer {
   opacity: 0;
   margin: 0;
 }
-#music-player.collapsed:hover .player-wave {
-  max-width: 40px;
-  opacity: 1;
+@media (hover: hover) and (pointer: fine) {
+  #music-player.collapsed:hover .player-wave {
+    max-width: 40px;
+    opacity: 1;
+  }
 }
 .wave-bar {
   width: 2px;
@@ -972,10 +978,12 @@ footer {
   margin: 0;
   pointer-events: none;
 }
-#music-player.collapsed:hover .player-btn {
-  width: 40px;
-  opacity: 1;
-  pointer-events: auto;
+@media (hover: hover) and (pointer: fine) {
+  #music-player.collapsed:hover .player-btn {
+    width: 40px;
+    opacity: 1;
+    pointer-events: auto;
+  }
 }
 
 .btn-icon--play {
