@@ -124,6 +124,7 @@ export default function Home() {
   const [cornersBloom, setCornersBloom] = useState(false);
   const [playerVisible, setPlayerVisible] = useState(false);
   const [playerCollapsed, setPlayerCollapsed] = useState(false);
+  const collapseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // RSVP state
   const [rsvpSubmitted, setRsvpSubmitted] = useState(false);
@@ -188,19 +189,22 @@ export default function Home() {
       setPlayerVisible(true);
       startMusic(volume);
       // tampilkan info lagu sebentar, lalu ciutkan jadi gambar album saja
-      setTimeout(() => setPlayerCollapsed(true), 5000);
+      scheduleCollapse();
     }, 900);
   };
 
-  // ── Toggle play/pause dari widget player; setiap kali diputar (ulang),
-  // tampilkan lagi info lagu sebentar lalu ciutkan setelah 5 detik ──
+  // ── Jadwalkan player ciut kembali setelah 5 detik, membatalkan jadwal sebelumnya ──
+  const scheduleCollapse = () => {
+    if (collapseTimerRef.current) clearTimeout(collapseTimerRef.current);
+    collapseTimerRef.current = setTimeout(() => setPlayerCollapsed(true), 5000);
+  };
+
+  // ── Toggle play/pause dari widget player; baik saat di-pause maupun
+  // di-play ulang, tampilkan lagi info lagu sebentar lalu ciutkan setelah 5 detik ──
   const handlePlayerToggle = () => {
-    const willPlay = !isPlaying;
     toggleMusic(volume);
-    if (willPlay) {
-      setPlayerCollapsed(false);
-      setTimeout(() => setPlayerCollapsed(true), 5000);
-    }
+    setPlayerCollapsed(false);
+    scheduleCollapse();
   };
 
   // ── Volume helpers ──
